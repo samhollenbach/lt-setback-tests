@@ -29,7 +29,7 @@ def peak_stats(target, max_peak=None):
     max_new_load = max(new_power)
     peak_clip = max_old_load - max_new_load
 
-    height_threshold = (max_peak * 0.4) if max_peak else None
+    height_threshold = (max_peak * 0.3) if max_peak else None
     peaks, properties = find_target_peaks(target, height=height_threshold)
 
     peak_results = []
@@ -58,6 +58,7 @@ def feature_base_stats(target, feature):
     return {
         f'{feature}_max': max(target[feature]),
         f'{feature}_min': min(target[feature]),
+        f'{feature}_avg': sum(target[feature]) / len(target[feature]),
         f'{feature}_range': (max(target[feature]) - min(target[feature]))
     }
 
@@ -72,3 +73,18 @@ def find_target_peaks(target, prominence=5, distance=18, width=6, height=None,
                                    distance=distance, width=width,
                                    height=height)
     return peaks, properties
+
+
+def find_daily_monthly_days(daily_targets, daily_stats, monthly_targets,
+                            monthly_stats):
+    keep_targets = []
+    for day_targets, day_stats, monthly_day_targets, monthly_day_stats in zip(
+            daily_targets,
+            daily_stats,
+            monthly_targets,
+            monthly_stats):
+        if monthly_day_stats['peaks']:
+            keep_targets.append(
+                (day_targets, day_stats, monthly_day_targets,
+                 monthly_day_stats))
+    return keep_targets

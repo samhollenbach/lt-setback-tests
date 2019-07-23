@@ -9,6 +9,9 @@ from savings import get_bill_calculator
 def run_iterative_optimizer(loads, config):
     optimizer_config = config['optimizer_config']
     bill_calculator = get_bill_calculator(optimizer_config)
+    optimize_energy = True
+    if 'optimize_energy' in config:
+        optimize_energy = config['optimize_energy']
     targets = []
     for time_frame, load in loads:
 
@@ -23,7 +26,8 @@ def run_iterative_optimizer(loads, config):
             print(time_frame)
             count += 1
 
-            optimizer = Optimizer(optimizer_config)
+            optimizer = Optimizer(optimizer_config,
+                                  optimize_energy=optimize_energy)
             target = optimizer.solve(load)
             print(pulp.LpStatus[optimizer.frame.status])
 

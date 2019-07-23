@@ -80,78 +80,77 @@ def stat_plot(stats):
     def stat(name):
         return [stats[name] for stats in peak_stat_data]
 
-    def to_mins(timestamp):
-        if not isinstance(timestamp, datetime.datetime):
-            return timestamp
-        return (timestamp.hour * 60 + timestamp.minute)
-
-    for stat_day in stats:
-        temp = stat_day['temperature_max']
-        for peak in stat_day['peaks']:
-            peak_stat_fields = ['peak_time', 'charge_start', 'discharge_end',
-                                'peak_auc', 'peak']
-            stats = {
-                'temp': temp,
-                **{k: to_mins(v) for k, v in peak.items() if
-                   k in peak_stat_fields}
-            }
-            peak_stat_data.append(stats)
+    peak_stat_data = get_peak_stat_data(stats)
 
     x = stat('peak_time')
     x2 = stat('charge_start')
-    y = stat('temp')
-    y2 = stat('peak_auc')
-    y3 = stat('peak')
+    y = stat('temp_avg')
+    y2 = stat('temp_max')
+    y3 = stat('peak_auc')
+    y4 = stat('peak')
+
+    s = normalize(np.array(y4).reshape(1, -1)) * 500
 
     # ax.scatter(x, y, c=c)
-    ax.scatter(x2, y3, marker='x', c=y)
+    ax.scatter(x2, y, s=s, marker='x', c=y2)
     ax.set_xlabel('Time of day in minutes')
     ax.set_ylabel('Temperature (F)')
     ax.set_xlim(0, 24 * 60)
+    ax.set_ylim(0, 100)
     return ax
 
 
 def stat_plot_compare(stats_monthly, stats_daily):
     fig, ax = plt.subplots(figsize=(14, 8))
 
-    def to_mins(timestamp):
-        if not isinstance(timestamp, datetime.datetime):
-            return timestamp
-        return (timestamp.hour * 60 + timestamp.minute)
+    peak_stat_data = []
+
+    def stat(name):
+        return [stats[name] for stats in peak_stat_data]
 
     colors = ['green', 'red']
     # ax.scatter(x2, y, marker='x', c=c)
     ax.set_xlabel('Time of day in minutes')
     ax.set_ylabel('Temperature (F)')
     ax.set_xlim(0, 24 * 60)
+    ax.set_ylim(0, 100)
     for i, stats in enumerate((stats_monthly, stats_daily)):
-        peak_stat_data = []
-
-        def stat(name):
-            return [stats[name] for stats in peak_stat_data]
-
-        for stat_day in stats:
-            temp = stat_day['temperature_max']
-            for peak in stat_day['peaks']:
-                peak_stat_fields = ['peak_time', 'charge_start',
-                                    'discharge_end',
-                                    'peak_auc', 'peak']
-                stats = {
-                    'temp_max': temp,
-                    **{k: to_mins(v) for k, v in peak.items() if
-                       k in peak_stat_fields}
-                }
-                peak_stat_data.append(stats)
-
+        peak_stat_data = get_peak_stat_data(stats)
         x = stat('peak_time')
         x2 = stat('charge_start')
         x3 = stat('discharge_end')
-        y = stat('temp_max')
-        y2 = stat('peak_auc')
-        y3 = stat('peak')
+        y = stat('temp_avg')
+        y2 = stat('temp_avg')
+        y3 = stat('peak_auc')
+        y4 = stat('peak')
 
-        s = normalize(np.array(y2).reshape(1, -1)) * 500
+        s = normalize(np.array(y4).reshape(1, -1)) * 500
 
         ax.scatter(x2, y, s=s, c=colors[i], alpha=0.6)
     ax.legend(['Monthly', 'Daily'])
     return ax
+
+
+def get_peak_stat_data(stats):
+    peak_stat_data = []
+
+    def to_mins(timestamp):
+        if not isinstance(timestamp, datetime.datetime):
+            return timestamp
+        return (timestamp.hour * 60 + timestamp.minute)
+
+    for stat_day in stats:
+        temp_avg = stat_day['temperature_avg']
+        temp_max = stat_day['temperature_max']
+        for peak in stat_day['peaks']:
+            peak_stat_fields = ['peak_time', 'charge_start',
+                                'discharge_end',
+                                'peak_auc', 'peak']
+            stats = {
+                'temp_max': temp_max,
+                'temp_avg': temp_avg,
+                **{k: to_mins(v) for k, v in peak.items() if
+                   k in peak_stat_fields}
+            }
+            peak_stat_data.append(stats)
+    return peak_stat_data

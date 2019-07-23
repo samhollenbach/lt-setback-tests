@@ -26,7 +26,7 @@ def load_data(site, start, end, power_file, config_file):
     return power_data, master_conf
 
 
-@pickle_jar(detect_changes=False)
+# @pickle_jar(detect_changes=False)
 def get_monthly_targets(data, conf, start=None, end=None):
     """
     Run optimizer on each month in dataset and collect targets.
@@ -56,7 +56,7 @@ def get_monthly_targets(data, conf, start=None, end=None):
     return run_iterative_optimizer(months, conf)
 
 
-@pickle_jar(detect_changes=False)
+# @pickle_jar(detect_changes=False)
 def get_daily_targets(data, conf, start=None, end=None):
     """
     Run optimizer on each individual day in data set and collect targets.
@@ -118,6 +118,7 @@ end = "2019-05-31 23:45:00-07"
 power_file = 'input/WFROS_timeseries_filled.csv'
 config_file = 'input/WF_LTSB_mass_and_SST.csv'
 power_data, master_conf = load_data(site, start, end, power_file, config_file)
+master_conf['optimize_energy'] = False
 
 monthly_targets_days, daily_targets = get_monthly_daily_targets(power_data,
                                                                 master_conf)
@@ -132,3 +133,12 @@ ax = stat_plot(stats_daily)
 ax2 = stat_plot(stats_monthly)
 ax3 = stat_plot_compare(stats_monthly, stats_daily)
 plt.show()
+
+monthly_run_days = analyze.find_daily_monthly_days(daily_targets, stats_daily,
+                                                   monthly_targets_days,
+                                                   stats_monthly)
+
+for day_targets, day_stats, month_targets, month_stats, in monthly_run_days:
+    lt_plot(day_targets)
+    lt_plot(month_targets)
+    plt.show()

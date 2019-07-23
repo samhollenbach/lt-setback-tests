@@ -45,7 +45,7 @@ class Optimizer:
         frame (obj): PuLP LP optimization object
     """
 
-    def __init__(self, config):
+    def __init__(self, config, optimize_energy=True):
         """
         Initialize the Optimizer object.
 
@@ -56,6 +56,8 @@ class Optimizer:
 
         self.start = config['start']
         self.end = config['end']
+
+        self.optimize_energy = optimize_energy
 
         # Load performance parameters from configuration
         self.mcl = config['MCL']
@@ -220,8 +222,10 @@ class Optimizer:
             energy.append(energy_tariff[t] * power / 4)
 
         # Add objective to frame
-        # self.frame += pulp.lpSum(demand + energy)
-        self.frame += pulp.lpSum(demand)
+        if self.optimize_energy:
+            self.frame += pulp.lpSum(demand + energy)
+        else:
+            self.frame += pulp.lpSum(demand)
 
     def _add_constraints(self, df, building_power_column='building_baseline',
                          crs_power_column='crs_baseline',
