@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
-from matplotlib import colors
 import numpy as np
-import datetime
+from analyze import flatten_stat_data
 from sklearn.preprocessing import normalize
 
 
@@ -73,84 +72,120 @@ def peak_plot(target, peaks, properties, max_peak=None):
     return ax
 
 
-def stat_plot(stats):
-    fig, ax = plt.subplots(figsize=(14, 8))
-    peak_stat_data = []
+def stat_plot(stats, label=None):
+    ax = setup_stat_plot()
+    peak_stat_data = flatten_stat_data(stats)
+    get_stat_plot(ax, peak_stat_data,
+                  x='baseline_peak_load',
+                  y='offset_normalized',
+                  s='temperature_avg',
+                  c='temperature_max')
+    if label:
+        ax.set_title(label)
+    return ax
 
-    def stat(name):
-        return [stats[name] for stats in peak_stat_data]
 
-    peak_stat_data = get_peak_stat_data(stats)
-
-    x = stat('peak_time')
-    x2 = stat('charge_start')
-    y = stat('temp_avg')
-    y2 = stat('temp_max')
-    y3 = stat('peak_auc')
-    y4 = stat('peak')
-
-    s = normalize(np.array(y4).reshape(1, -1)) * 500
-
-    # ax.scatter(x, y, c=c)
-    ax.scatter(x2, y, s=s, marker='x', c=y2)
-    ax.set_xlabel('Time of day in minutes')
-    ax.set_ylabel('Temperature (F)')
-    ax.set_xlim(0, 24 * 60)
-    ax.set_ylim(0, 100)
+def stat_plot_intervals(stats, label=None, **kwargs):
+    ax = setup_stat_plot()
+    peak_stat_data = flatten_stat_data(stats, by='intervals')
+    get_stat_plot(ax, peak_stat_data, **kwargs)
+    if label:
+        ax.set_title(label)
     return ax
 
 
 def stat_plot_compare(stats_monthly, stats_daily):
-    fig, ax = plt.subplots(figsize=(14, 8))
-
-    peak_stat_data = []
-
-    def stat(name):
-        return [stats[name] for stats in peak_stat_data]
+    ax = setup_stat_plot()
 
     colors = ['green', 'red']
-    # ax.scatter(x2, y, marker='x', c=c)
-    ax.set_xlabel('Time of day in minutes')
-    ax.set_ylabel('Temperature (F)')
-    ax.set_xlim(0, 24 * 60)
-    ax.set_ylim(0, 100)
     for i, stats in enumerate((stats_monthly, stats_daily)):
-        peak_stat_data = get_peak_stat_data(stats)
-        x = stat('peak_time')
-        x2 = stat('charge_start')
-        x3 = stat('discharge_end')
-        y = stat('temp_avg')
-        y2 = stat('temp_avg')
-        y3 = stat('peak_auc')
-        y4 = stat('peak')
-
-        s = normalize(np.array(y4).reshape(1, -1)) * 500
-
-        ax.scatter(x2, y, s=s, c=colors[i], alpha=0.6)
+        peak_stat_data = flatten_stat_data(stats)
+        get_stat_plot(ax, peak_stat_data,
+                      x='baseline_peak_load',
+                      y='offset_normalized',
+                      s='temperature_max',
+                      c=colors[i])
     ax.legend(['Monthly', 'Daily'])
     return ax
 
 
-def get_peak_stat_data(stats):
-    peak_stat_data = []
+def setup_stat_plot():
+    fig, ax = plt.subplots(figsize=(14, 8))
+    return ax
 
-    def to_mins(timestamp):
-        if not isinstance(timestamp, datetime.datetime):
-            return timestamp
-        return (timestamp.hour * 60 + timestamp.minute)
 
-    for stat_day in stats:
-        temp_avg = stat_day['temperature_avg']
-        temp_max = stat_day['temperature_max']
-        for peak in stat_day['peaks']:
-            peak_stat_fields = ['peak_time', 'charge_start',
-                                'discharge_end',
-                                'peak_auc', 'peak']
-            stats = {
-                'temp_max': temp_max,
-                'temp_avg': temp_avg,
-                **{k: to_mins(v) for k, v in peak.items() if
-                   k in peak_stat_fields}
-            }
-            peak_stat_data.append(stats)
-    return peak_stat_data
+def get_stat_plot(ax, peak_stat_data, x='', y='',
+                  c=None, s=None, marker='o'):
+    def stat(name):
+        return [stats[name] for stats in peak_stat_data]
+
+    try:
+        ax.set_xlabel(feature_display_settings[x]['axis_label'])
+        ax.set_xlim(*feature_display_settings[x]['limits'])
+    except KeyError:
+        pass
+    x = stat(x)
+    try:
+        ax.set_ylabel(feature_display_settings[y]['axis_label'])
+        ax.set_ylim(*feature_display_settings[y]['limits'])
+    except KeyError:
+        pass
+    y = stat(y)
+    try:
+        c = stat(c)
+    except KeyError:
+        pass
+    if not s:
+        s = 30
+    elif not isinstance(s, int):
+        s = normalize(np.array(stat(s)).reshape(1, -1)) * 500
+    ax.scatter(x=x, y=y, c=c, s=s, marker=marker)
+    return ax
+
+
+feature_display_settings = {
+    'timestamp': {
+        'limits': (0, 24 * 60),
+        'axis_label': 'Timestamp in Minutes'
+    },
+    'temperature_max': {
+        'limits': (0, 100),
+        'axis_label': 'Maximum Temperature (F)'
+    },
+    'temperature_avg': {
+        'limits': (0, 100),
+        'axis_label': 'Average Temperature (F)'
+    },
+    'baseline_peak_soc': {
+        'limits': (0, 700),
+        'axis_label': 'Max Baseline SoC'
+    },
+    'target_peak_soc': {
+        'limits': (0, 700),
+        'axis_label': 'Max Target SoC (Threshold)'
+    },
+    'baseline_load': {
+        # 'limits': (0, 1000),
+        'axis_label': 'Current Baseline Load (kW)'
+    },
+    'offset': {
+        'limits': (-60, 60),
+        'axis_label': 'Offset'
+    },
+    'offset_normalized': {
+        'limits': (-1.1, 1.1),
+        'axis_label': 'Offset (Normalized)'
+    },
+    'charge_start_time': {
+        'limits': (0, 24 * 60),
+        'axis_label': 'Charge Start Time in Minutes'
+    },
+    'peak_soc_time': {
+        'limits': (0, 24 * 60),
+        'axis_label': 'Time of Peak SoC in Minutes'
+    },
+    'discharge_end_time': {
+        'limits': (0, 24 * 60),
+        'axis_label': 'Discharge End Time in Minutes'
+    },
+}
