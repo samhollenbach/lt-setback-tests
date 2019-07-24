@@ -21,7 +21,10 @@ def read_power_data(power_file, config):
 
     timestamps = pd.date_range(start, end, freq='15T')
 
-    df = pd.read_csv(power_file, parse_dates=['timestamp'])
+    try:
+        df = pd.read_csv(power_file, parse_dates=['timestamp'])
+    except ValueError:
+        df = pd.read_excel(power_file, parse_dates=['timestamp'])
 
     df['timestamp'] = timestamps
     df.set_index('timestamp', drop=True, inplace=True)

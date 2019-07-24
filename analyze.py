@@ -96,6 +96,11 @@ def max_baseline_stats(target):
     interval = target.loc[target['baseline'].idxmax()]
     if not interval['offsets'] and not interval['soc']:
         return {'intervals': []}
+    offset_noramlized = interval['offsets'] / interval[
+        'discharge_limits']
+    if offset_noramlized < 0.95 and interval['baseline'] >= 260:
+        print(interval)
+        print(offset_noramlized)
     inter = {
         'timestamp': interval.name,
         'baseline_load': interval['baseline'],
@@ -104,8 +109,7 @@ def max_baseline_stats(target):
         'charge_limit': interval['charge_limits'],
         'discharge_limit': interval['discharge_limits'],
         'offset': interval['offsets'],
-        'offset_normalized': interval['offsets'] / interval[
-            'discharge_limits'],
+        'offset_normalized': offset_noramlized,
         'temperature': interval['temperature']
     }
 

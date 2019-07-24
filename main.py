@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 from pprint import pprint
 import pandas as pd
@@ -99,59 +100,74 @@ def single_day_analysis(targets, id):
 #####################
 # Initialize Script #
 #####################
-site = 'WFROS'
-start = "2018-06-01 00:00:00-07"
-end = "2019-05-31 23:45:00-07"
-power_file = 'input/WFROS_timeseries_filled.csv'
-config_file = 'input/WF_LTSB_mass_and_SST.csv'
-power_data, master_conf = load.load_data(site,
-                                         start,
-                                         end,
-                                         power_file,
-                                         config_file)
-master_conf['optimize_energy'] = False
 
-#############################
-# Get Monthly/Daily Targets #
-#############################
-monthly_targets_days, daily_targets = get_monthly_daily_targets(power_data,
-                                                                master_conf)
 
-# print(list(monthly_targets_days[0].columns))
-# for i in range(105, 220):
-#     single_day_analysis(monthly_targets_days, i)
+sites = ['WM3138', 'WM3708', 'WN5606', 'WM5859', 'WM3140',
+         'WM3796', 'WM4132', 'WM5603', 'WM5635']
 
-###########################
-# Get Monthly/Daily Stats #
-###########################
-stats_monthly = analyze.collect_stats(monthly_targets_days, max_baseline=True)
-stats_daily = analyze.collect_stats(daily_targets, max_baseline=True)
+for site in sites[:1]:
+    # site = 'WFROS'
+    start = "2018-06-01 00:00:00-07"
+    end = "2019-05-31 23:45:00-07"
+    # power_file = 'input/WFROS_timeseries_filled.csv'
+    print(site)
+    path = 'input/'
+    power_file = [os.path.join(path, i) for i in os.listdir(path) if
+                  os.path.isfile(os.path.join(path, i)) and
+                  site in i][0]
+    print(power_file)
+    config_file = 'input/WF_LTSB_mass_and_SST.csv'
+    power_data, master_conf = load.load_data('WFROS',
+                                             start,
+                                             end,
+                                             power_file,
+                                             config_file)
+    master_conf['optimize_energy'] = False
 
-# stat_plot_compare(stats_monthly, stats_daily)
-stat_plot_intervals(stats_monthly, 'Monthly',
-                    x='timestamp',
-                    y='offset_normalized',
-                    c='temperature')
-stat_plot_intervals(stats_daily, 'Daily',
-                    x='timestamp',
-                    y='offset_normalized',
-                    c='temperature')
-stat_plot_intervals(stats_monthly, 'Monthly',
-                    x='baseline_load',
-                    y='offset_normalized',
-                    c='temperature')
-stat_plot_intervals(stats_daily, 'Daily',
-                    x='baseline_load',
-                    y='offset_normalized',
-                    c='temperature')
-plt.show()
+    #############################
+    # Get Monthly/Daily Targets #
+    #############################
+    monthly_targets_days, daily_targets = get_monthly_daily_targets(power_data,
+                                                                    master_conf)
 
-########################################
-# Match Monthly Run Days to Daily Runs #
-########################################
-monthly_run_days = analyze.find_daily_monthly_days(daily_targets, stats_daily,
-                                                   monthly_targets_days,
-                                                   stats_monthly)
+    # print(list(monthly_targets_days[0].columns))
+    # for i in range(105, 220):
+    i = len(daily_targets) - 1
+    single_day_analysis(daily_targets, i)
+
+    ###########################
+    # Get Monthly/Daily Stats #
+    ###########################
+    stats_monthly = analyze.collect_stats(monthly_targets_days,
+                                          max_baseline=True)
+    stats_daily = analyze.collect_stats(daily_targets, max_baseline=True)
+
+    # stat_plot_compare(stats_monthly, stats_daily)
+    stat_plot_intervals(stats_monthly, f'{site} - Monthly Optimization',
+                        x='timestamp',
+                        y='offset_normalized',
+                        c='temperature_max')
+    stat_plot_intervals(stats_daily, f'{site} - Daily Optimization',
+                        x='timestamp',
+                        y='offset_normalized',
+                        c='temperature_max')
+    stat_plot_intervals(stats_monthly, f'{site} - Monthly Optimization',
+                        x='baseline_load',
+                        y='offset_normalized',
+                        c='temperature_max')
+    stat_plot_intervals(stats_daily, f'{site} - Daily Optimization',
+                        x='baseline_load',
+                        y='offset_normalized',
+                        c='temperature_max')
+    plt.show()
+
+    ########################################
+    # Match Monthly Run Days to Daily Runs #
+    ########################################
+    monthly_run_days = analyze.find_daily_monthly_days(daily_targets,
+                                                       stats_daily,
+                                                       monthly_targets_days,
+                                                       stats_monthly)
 
 # for day_targets, day_stats, month_targets, month_stats, in monthly_run_days:
 #     lt_plot(day_targets)

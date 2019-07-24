@@ -16,23 +16,23 @@ class pickle_jar(object):
             os.mkdir(cache_dir)
         except FileExistsError:
             pass
-        self.output = output
+        self.output_res = output
 
     def __call__(self, func, *args, **kwargs):
 
         def new_func(*args, **kwargs):
-            if not self.output:
-                self.output = f'pickle_jar/jar/{func.__name__}'
-
+            if not self.output_res:
+                self.output_path = f'pickle_jar/jar/{func.__name__}'
+                self.output_res = f'{self.output_path}/results.pickle'
+            if not os.path.exists(self.output_path):
+                os.makedirs(self.output_path)
             source = inspect.getsource(func)
             source = '\n'.join(source.split('\n')[1:])
             func_args = (hash(pickle.dumps(args)), hash(pickle.dumps(kwargs)))
-            print(self.output, func_args)
-            if os.path.exists(self.output) and not self.invalidate:
-                with open(f'{self.output}/results.pickle', 'rb') as rb:
+            if os.path.exists(self.output_res) and not self.invalidate:
+                with open(self.output_res, 'rb') as rb:
                     try:
                         res, cached_source, cached_func_args = pickle.load(rb)
-                        print(self.output, cached_func_args)
                     except ValueError:
                         print("Issue parsing pickle cache, reloading")
                         res = func(*args, **kwargs)
@@ -74,6 +74,6 @@ class pickle_jar(object):
 
     def to_cache(self, res, source, func_args):
         cache_entry = (res, source, func_args)
-        with open(self.output, 'wb+') as wb:
+        with open(self.output_res, 'wb+') as wb:
             pickle.dump(cache_entry, wb)
         return res
