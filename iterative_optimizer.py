@@ -6,7 +6,7 @@ from lt_optimizer import Optimizer
 from savings import get_bill_calculator
 
 
-def run_iterative_optimizer(loads, config):
+def run_iterative_optimizer(loads, config, verbose=False):
     optimizer_config = config['optimizer_config']
     bill_calculator = get_bill_calculator(optimizer_config)
     optimize_energy = True
@@ -22,14 +22,16 @@ def run_iterative_optimizer(loads, config):
         optimizer_config['end'] = load.index[-1]
         count = 0
 
+        print(f'Starting optimization for {time_frame}')
         while True:
-            print(time_frame)
             count += 1
 
             optimizer = Optimizer(optimizer_config,
                                   optimize_energy=optimize_energy)
             target = optimizer.solve(load)
-            print(pulp.LpStatus[optimizer.frame.status])
+
+            print(
+                f'Iteration {count} - {pulp.LpStatus[optimizer.frame.status]}')
 
             baseline_demand = bill_calculator.calculate_demand_bill(
                 target, load_column='baseline')
@@ -46,9 +48,10 @@ def run_iterative_optimizer(loads, config):
 
             savings_diff = abs(total_savings - previous_total_savings)
 
-            print("Solved for count {}".format(count))
-            print("Total Savings {}".format(total_savings))
-            print("Delta in savings {}".format(savings_diff))
+            if verbose:
+                print("Solved for count {}".format(count))
+                print("Total Savings {}".format(total_savings))
+                print("Delta in savings {}".format(savings_diff))
 
             if count == iteration_limit:
                 print("Warning: Optimizer iteration limit reached")
@@ -70,6 +73,6 @@ def run_iterative_optimizer(loads, config):
             map(celsius_to_farenheit, get_sst(target['soc'], config)))
         targets.append(target)
 
-        print(f"Completed optimizing for {time_frame}")
+        print(f"Completed optimizing for {time_frame}\n")
 
     return targets

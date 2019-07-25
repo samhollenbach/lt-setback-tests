@@ -6,7 +6,11 @@ from util import master_cop_eq
 
 
 def get_master_config(site, start, end, lt_config_file):
-    site_id_map = {'WFROS': "pge_e19_2019"}
+    if site == 'WFROS' or site == 'WFROS':
+        site_id = 'pge_e19_2019'
+    else:
+        site_id = 'pge_e19_2019'
+
     lt_conf = get_lt_config(lt_config_file)
     lt_capacity = lt_conf.loc[lt_conf.Store == site]['mass_derated'].iloc[0]
     sst_max_f = lt_conf.loc[lt_conf.Store == site]['SST_max'].iloc[0]
@@ -16,12 +20,12 @@ def get_master_config(site, start, end, lt_config_file):
     cop_max_sst = partial(master_cop_eq, farenheit_to_celsius(sst_max_f))
     master = {
         'site': site,
-        'site_id': site_id_map[site],
+        'site_id': site_id,
         'start': start,
         'end': end,
-        'optimizer_config': get_optimizer_config(site_id_map[site], start, end,
+        'optimizer_config': get_optimizer_config(site_id, start, end,
                                                  lt_capacity),
-        'lt_config': lt_conf,
+        'lt_config': lt_conf.loc[lt_conf.Store == site].to_dict(),
         'lt_capacity': lt_capacity,
         'sst_max_f': sst_max_f,
         'sst_mid_f': sst_mid_f,

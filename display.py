@@ -2,16 +2,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from analyze import flatten_stat_data
 from sklearn.preprocessing import normalize
+import analyze
+import pandas as pd
 
 
-def lt_plot(data, t1=None, t2=None, max_peak=None):
+def lt_plot(site, data, t1=None, t2=None, max_peak=None):
     if t1 is None:
         t1 = data.index[0]
     if t2 is None:
         t2 = data.index[-1]
 
     fig, ax = plt.subplots(figsize=(14, 8))
-    plt.title("LT Optimization for WM1554 Rack A")
+    plt.title(f"LT Optimization for {site}")
 
     # plotting power related graphs on first y axis
     ln1 = ax.plot(data.offsets[t1:t2],
@@ -141,6 +143,22 @@ def get_stat_plot(ax, peak_stat_data, x='', y='',
         s = normalize(np.array(stat(s)).reshape(1, -1)) * 500
     ax.scatter(x=x, y=y, c=c, s=s, marker=marker)
     return ax
+
+
+def single_day_analysis(site, targets, date):
+    if isinstance(date, str):
+        date = pd.to_datetime(date).date()
+    max_peak = max([max(t['soc']) for t in targets])
+    for target in targets:
+        if target.index[0].date() == date:
+            cur = target
+            break
+    # cur = targets[id]
+    ax = lt_plot(site, cur, max_peak=max_peak)
+    plt.show()
+    peaks, properties = analyze.find_target_peaks(cur)
+    ax2 = peak_plot(cur, peaks, properties, max_peak=max_peak)
+    plt.show()
 
 
 feature_display_settings = {

@@ -4,20 +4,22 @@ from scipy.signal import find_peaks
 import datetime
 
 
-def collect_stats(target_set, peaks=True, intervals=False, max_baseline=False):
+def collect_stats(site, target_set, peaks=True, intervals=False,
+                  max_baseline=False):
     stat_set = []
     max_peak = max([max(t['soc']) for t in target_set])
     for target in target_set:
         stat_set.append(
-            get_target_stats(target, peaks=peaks, intervals=intervals,
+            get_target_stats(site, target, peaks=peaks, intervals=intervals,
                              max_baseline=max_baseline,
                              max_peak=max_peak))
     return stat_set
 
 
-def get_target_stats(target, peaks=True, intervals=False,
+def get_target_stats(site, target, peaks=True, intervals=False,
                      max_baseline=False, max_peak=None):
     target_stats = {
+        'site': site,
         **feature_base_stats(target, 'temperature')
     }
     if peaks:
@@ -45,6 +47,9 @@ def find_target_peaks(target, prominence=10, distance=12, width=8,
                       height=None,
                       height_factor=0.3):
     soc = target['soc']
+
+    # for timestamp, interval in target.iterrows():
+    # print(interval)
 
     if not height:
         height = max(soc) * height_factor
@@ -96,11 +101,7 @@ def max_baseline_stats(target):
     interval = target.loc[target['baseline'].idxmax()]
     if not interval['offsets'] and not interval['soc']:
         return {'intervals': []}
-    offset_noramlized = interval['offsets'] / interval[
-        'discharge_limits']
-    if offset_noramlized < 0.95 and interval['baseline'] >= 260:
-        print(interval)
-        print(offset_noramlized)
+
     inter = {
         'timestamp': interval.name,
         'baseline_load': interval['baseline'],
@@ -109,7 +110,8 @@ def max_baseline_stats(target):
         'charge_limit': interval['charge_limits'],
         'discharge_limit': interval['discharge_limits'],
         'offset': interval['offsets'],
-        'offset_normalized': offset_noramlized,
+        'offset_normalized': interval['offsets'] / interval[
+            'discharge_limits'],
         'temperature': interval['temperature']
     }
 
@@ -119,13 +121,15 @@ def max_baseline_stats(target):
 def interval_stats(target, max_peak=None):
     height_threshold = (max_peak * 0.2) if max_peak else None
     peaks, properties = find_target_peaks(target, height=height_threshold)
+    max_interval_timestamp = target.loc[target['baseline'].idxmax()].name
     interval_results = []
     for i, p in enumerate(peaks):
         left_base = properties['left_bases'][i]
         right_base = properties['right_bases'][i]
         target_period = target.iloc[left_base:right_base]
         for timestamp, interval in target_period.iterrows():
-
+            if timestamp != max_interval_timestamp:
+                continue
             if not interval['discharge_limits']:
                 continue
 
@@ -145,9 +149,10 @@ def interval_stats(target, max_peak=None):
     return {'intervals': interval_results}
 
 
-def flatten_stat_data(stats, by='peaks'):
+def flatten_stat_data(stats, timestamp_to_min=True, by='peaks'):
     def to_mins(timestamp):
-        if not isinstance(timestamp, datetime.datetime):
+        if not timestamp_to_min or not isinstance(timestamp,
+                                                  datetime.datetime):
             return timestamp
         return (timestamp.hour * 60 + timestamp.minute)
 
