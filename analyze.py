@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.signal import find_peaks
 import datetime
+from tariff import Tariff
 
 
 def collect_stats(site, target_set, peaks=True, intervals=False,
@@ -9,6 +10,8 @@ def collect_stats(site, target_set, peaks=True, intervals=False,
     stat_set = []
     max_peak = max([max(t['soc']) for t in target_set])
     for target in target_set:
+        tariff = Tariff('pge')
+        target = tariff.apply_period(load=target)
         stat_set.append(
             get_target_stats(site, target, peaks=peaks, intervals=intervals,
                              max_baseline=max_baseline,
@@ -98,21 +101,26 @@ def peak_stats(target, max_peak=None):
 
 
 def max_baseline_stats(target):
-    interval = target.loc[target['baseline'].idxmax()]
+    if 'On-Peak' in target['period'].unique():
+        on_peak_target = target[target['period'] == 'On-Peak']
+    else:
+        on_peak_target = target
+    interval = on_peak_target.loc[on_peak_target['baseline'].idxmax()]
     if not interval['offsets'] and not interval['soc']:
         return {'intervals': []}
 
     inter = {
         'timestamp': interval.name,
         'baseline_load': interval['baseline'],
-        'target_load': interval['baseline'],
+        'target_load': interval['load_values'],
         'soc': interval['soc'],
         'charge_limit': interval['charge_limits'],
         'discharge_limit': interval['discharge_limits'],
         'offset': interval['offsets'],
         'offset_normalized': interval['offsets'] / interval[
             'discharge_limits'],
-        'temperature': interval['temperature']
+        'temperature': interval['temperature'],
+        'period': interval['period']
     }
 
     return {'intervals': [inter]}

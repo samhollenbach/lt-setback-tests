@@ -1,6 +1,6 @@
 import pytz
 import pandas as pd
-from pickle_jar import pickle_jar
+from pickle_jar.pickle_jar import pickle_jar
 import config
 import util
 from iterative_optimizer import run_iterative_optimizer

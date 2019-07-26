@@ -4,6 +4,7 @@ from pprint import pprint
 import pandas as pd
 from pickle_jar import pickle_jar
 import load
+import savings
 from display import lt_plot, peak_plot, stat_plot, stat_plot_intervals, \
     stat_plot_compare, single_day_analysis
 import analyze
@@ -32,7 +33,7 @@ if solar:
 else:
     sites = non_solar_sites[:]
 
-for site in sites:
+for site in sites[-1:]:
     start = "2018-06-01 00:00:00-07"
     end = "2019-05-31 23:45:00-07"
     if site == 'WFSTC':
@@ -94,20 +95,28 @@ for site in sites:
 
     key_stat_intervals = []
     for stat_interval in stats_monthly_months_flat:
-        summer_months = [5, 6, 7, 8, 9, 10]
-        if stat_interval['timestamp'].month not in summer_months:
-            continue
+        # pprint(stat_interval)
 
-        offset_noramlized = stat_interval['offset'] / stat_interval[
-            'discharge_limit']
-        if offset_noramlized < 0.999 and stat_interval[
-            'baseline_load'] >= 200:
+        single_day_analysis(site,
+                            monthly_targets_days,
+                            '2019-06-11')
+
+        # summer_months = [5, 6, 7, 8, 9, 10]
+        #         # if stat_interval['timestamp'].month not in summer_months:
+        #         #     continue
+        pprint(stat_interval)
+        if stat_interval['baseline_load'] >= 275:
             pprint(stat_interval)
-            print(offset_noramlized)
-            key_stat_intervals.append(stat_interval)
-            # single_day_analysis(site,
-            #                     monthly_targets_days,
-            #                     stat_interval['timestamp'].date())
+        # offset_noramlized = stat_interval['offset'] / stat_interval[
+        #     'discharge_limit']
+        # if offset_noramlized < 0.999 and stat_interval[
+        #     'baseline_load'] >= 200:
+        #     pprint(stat_interval)
+        #     print(offset_noramlized)
+        #     key_stat_intervals.append(stat_interval)
+        # single_day_analysis(site,
+        #                     monthly_targets_days,
+        #                     stat_interval['timestamp'].date())
 
     ###########################
     # Add Data To Site Groups #
@@ -167,12 +176,18 @@ for site in sites:
     #     lt_plot(site, month_targets)
     #     plt.show()
 
-    if site == 'WM3140':
-        for month_target in monthly_targets:
-            lt_plot(site, month_target)
-            plt.show()
+    # if site == 'WM3140':
+    #     for month_target in monthly_targets:
+    #         lt_plot(site, month_target)
+    #         plt.show()
 
-show_plots_all = True
+    ##################
+    # Savings Tables #
+    ##################
+    savings = savings.generate_savings_table(monthly_targets, master_conf)
+    pprint(savings)
+
+show_plots_all = False
 if show_plots_all:
     if solar:
         smonthly = [stats_month for stats_monthly in solar_stats_monthly
